@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="el" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>MISTVAPE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{--accent:#6366f1}
+    body { transition: background-color .25s ease, color .25s ease; }
+    /* HERO slider card */
+    .hero-card { border-radius:10px; overflow:hidden; box-shadow: 0 10px 40px rgba(54, 5, 16, 0.18); }
+    .slide { position:absolute; inset:0; opacity:0; transform:scale(1.02); transition: all .8s cubic-bezier(.2,.9,.2,1); }
+    .slide.active { opacity:1; transform:scale(1); z-index:2; }
+    .arrow { width:44px;height:44px;border-radius:10px;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700; }
+    .dot { width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.3); border:1px solid rgb(255, 255, 255) }
+    .dot.active { background: rgb(255, 255, 255); box-shadow:0 6px 18px rgba(0,0,0,.25); }
+    /* product animations */
+    .product-card { perspective:900px; transform-style:preserve-3d; transition: transform .35s ease, box-shadow .35s ease; }
+    .product-card:hover { transform: translateY(-8px) rotateX(4deg); box-shadow:0 18px 40px rgba(2,6,23,.18); }
+    .product-card img { transition: transform .5s ease, filter .25s ease; }
+    .product-card:hover img { transform: scale(1.06); }
+    html.dark .product-card img { filter: brightness(.9) contrast(.95); }
+    /* modal */
+    #productModal.hidden { display:none; }
+    #productModal.flex .modal-box { animation: modalIn .42s cubic-bezier(.2,.9,.25,1); }
+    @keyframes modalIn {
+      from { transform: translateY(40px) scale(.94); opacity:0; }
+      to   { transform: translateY(0) scale(1); opacity:1; }
+    }
+    /* cart slide effect */
+    #cartSidebar { transition: transform .45s cubic-bezier(.2,.9,.2,1); }
+    /* small helpers */
+    .btn-press:active { transform: scale(.98); }
+    .reveal { opacity:0; transform: translateY(22px); transition: all .75s cubic-bezier(.2,.9,.2,1); }
+    .reveal.visible { opacity:1; transform:none; }
+
+    /* ORDER MODAL */
+    #orderModal.hidden { display:none; }
+    #orderModal .modal-box { max-height: 90vh; overflow:auto; }
+  </style>
+</head>
+<body class="antialiased bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+
+  <!-- HEADER / NAV -->
+  <header class="fixed top-0 left-0 w-full z-50 bg-white/80 dark:bg-gray-800/80 backdrop-blur border-b">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="text-2xl font-extrabold text-indigo-1200">MIST<span class="text-gray-700 dark:text-gray-200">VAPE</span></div>
+        <nav class="hidden lg:flex gap-4 text-sm text-gray-700 dark:text-gray-300">
+          <a href="#devices" class="hover:text-indigo-600">ΣΥΣΚΕΥΕΣ</a>
+          <a href="#atoms" class="hover:text-indigo-600">ΑΤΜΟΠΟΙΗΤΕΣ</a>
+          <a href="#liquids" class="hover:text-indigo-600">ΥΓΡΑ ΑΝΑΠΛΗΡΩΣΗΣ</a>
+          <a href="#access" class="hover:text-indigo-600">ΑΞΕΣΟΥΑΡ</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="themeToggle" class="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 btn-press">☀️</button>
+        <button id="openCartBtn" class="relative px-3 py-1 rounded-md bg-white/10 hover:bg-white/20 btn-press">
+          🛒 <span id="cartBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 rounded-full">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="pt-20">
+
+    <!-- HERO/BANNER (wide but centered) -->
+    <section class="max-w-7xl mx-auto px-4 mt-4 reveal">
+      <div class="hero-card relative h-[420px] bg-gray-100">
+        <div id="slidesWrap" class="absolute inset-0">
+          <div class="slide active"><img src="images/hero1.jpg" alt="hero" class="w-full h-full object-cover"></div>
+          <div class="slide"><img src="images/hero2.jpg" alt="hero" class="w-full h-full object-cover"></div>
+          <div class="slide"><img src="images/hero3.jpg" alt="hero" class="w-full h-full object-cover"></div>
+        </div>
+
+        <!-- arrows -->
+        <button id="prevSlide" class="hidden md:flex arrow absolute left-6 top-1/2 -translate-y-1/2">‹</button>
+        <button id="nextSlide" class="hidden md:flex arrow absolute right-6 top-1/2 -translate-y-1/2">›</button>
+
+        <!-- dots -->
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-3">
+          <button class="dot active" data-dot="0" aria-label="slide1"></button>
+          <button class="dot" data-dot="1" aria-label="slide2"></button>
+          <button class="dot" data-dot="2" aria-label="slide3"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- NAV TABS (sections) -->
+    <section class="max-w-7xl mx-auto px-4 mt-4">
+      <div class="grid grid-cols-4 gap-4 text-center text-sm">
+        <a href="#new" class="py-3 bg-gray-200/50 dark:bg-gray-700/50 rounded">ΝΕΑ ΠΡΟΪΟΝΤΑ</a>
+        <a href="#top" class="py-3 bg-gray-200/50 dark:bg-gray-700/50 rounded">ΚΟΡΥΦΑΙΑ ΠΡΟΪΟΝΤΑ</a>
+        <a href="#liquids" class="py-3 bg-gray-200/50 dark:bg-gray-700/50 rounded">ΥΓΡΑ ΑΝΑΠΛΗΡΩΣΗΣ</a>
+        <a href="#recommended" class="py-3 bg-gray-200/50 dark:bg-gray-700/50 rounded">ΠΡΟΤΕΙΝΟΜΕΝΑ</a>
+      </div>
+    </section>
+
+    <!-- PRODUCTS - generated modularly -->
+    <section id="products" class="max-w-7xl mx-auto px-4 mt-8 space-y-12">
+
+      <!-- New products -->
+      <div id="new" class="reveal">
+        <h2 class="text-2xl font-bold mb-4">ΝΕΑ ΠΡΟΪΟΝΤΑ</h2>
+        <div id="newGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+      </div>
+
+      <!-- Top products -->
+      <div id="top" class="reveal">
+        <h2 class="text-2xl font-bold mb-4">ΚΟΡΥΦΑΙΑ ΠΡΟΪΟΝΤΑ</h2>
+        <div id="topGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+      </div>
+
+      <!-- Liquids -->
+      <div id="liquids" class="reveal">
+        <h2 class="text-2xl font-bold mb-4">ΥΓΡΑ ΑΝΑΠΛΗΡΩΣΗΣ</h2>
+        <div id="liquidsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+      </div>
+
+      <!-- Recommended -->
+      <div id="recommended" class="reveal">
+        <h2 class="text-2xl font-bold mb-4">ΠΡΟΤΕΙΝΟΜΕΝΑ</h2>
+        <div id="recGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+      </div>
+
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact" class="mt-12 bg-gray-900 text-gray-200 py-8 dark:bg:black dark:text-gray-400">
+      <div class="max-w-7xl mx-auto px-4 text-center">
+        © 2025 MistVape
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- PRODUCT DETAIL MODAL -->
+  <div id="productModal" class="fixed inset-0 hidden items-center justify-center z-60 modal-backdrop p-4" style="backdrop-filter: blur(4px);">
+    <div class="modal-box bg-white dark:bg-gray-900 rounded-2xl max-w-4xl w-full shadow-2xl overflow-auto">
+      <div class="flex gap-6 p-6 flex-col md:flex-row">
+        <div class="md:w-1/2">
+          <img id="modalImg" src="" alt="product" class="w-full h-96 object-contain rounded-lg">
+        </div>
+        <div class="md:w-1/2">
+          <div class="flex items-start justify-between">
+            <h2 id="modalTitle" class="text-2xl font-bold"></h2>
+            <button id="closeModal" class="ml-4 px-3 py-1 rounded bg-gray-200 dark:bg-gray-700">Κλείσιμο ✕</button>
+          </div>
+          <div id="modalPrice" class="text-indigo-600 font-bold text-xl mt-3"></div>
+          <p id="modalDesc" class="mt-4 text-gray-700 dark:text-gray-300"></p>
+
+          <div class="mt-6 flex items-center gap-3">
+            <label>Ποσότητα</label>
+            <div class="flex items-center bg-gray-100 dark:bg-gray-800 rounded">
+              <button id="qtyDec" class="px-3 py-2">-</button>
+              <input id="qtyInput" type="number" value="1" min="1" class="w-16 text-center bg-transparent border-none px-2"/>
+              <button id="qtyInc" class="px-3 py-2">+</button>
+            </div>
+          </div>
+
+          <div class="mt-6 flex gap-3">
+            <button id="modalAdd" class="px-4 py-3 bg-indigo-600 text-white rounded-lg btn-press">Προσθήκη στο καλάθι</button>
+            <button id="modalBuy" class="px-4 py-3 bg-green-600 text-white rounded-lg btn-press">Άμεση αγορά</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CART SIDEBAR -->
+  <aside id="cartSidebar" class="fixed right-0 top-0 h-full w-96 p-6 z-50 transform translate-x-full glass shadow-2xl dark:bg-gray-800/80 dark:text-gray-100">
+    <div class="flex items-center justify-between mb-4">
+      <h4 class="text-lg font-bold">Το Καλάθι σου</h4>
+      <button id="closeCart" class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Κλείσιμο</button>
+    </div>
+    <div id="cartItems" class="space-y-3 overflow-auto max-h-[60vh]"></div>
+    <div class="mt-4 border-t pt-4">
+      <div class="flex justify-between text-sm text-gray-600 dark:text-gray-300"><span>Σύνολο</span><span id="cartTotal">€0.00</span></div>
+      <div class="mt-3 flex gap-2">
+        <button id="clearCart" class="flex-1 bg-yellow-500 text-white py-2 rounded">Καθαρισμός</button>
+        <!-- Checkout θα ανοίγει το modal παραγγελίας/παραλαβής -->
+        <button id="checkoutBtn" class="flex-1 bg-indigo-600 text-white py-2 rounded">Checkout</button>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button id="orderBtnSidebar" class="flex-1 bg-green-600 text-white py-2 rounded">Παραγγελία</button>
+        <button id="pickupBtnSidebar" class="flex-1 bg-blue-600 text-white py-2 rounded">Παραλαβή από το κατάστημα</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ORDER MODAL (συνδεδεμένο με το cart) -->
+  <div id="orderModal" class="fixed inset-0 hidden items-center justify-center z-60 modal-backdrop p-4" style="backdrop-filter: blur(4px);">
+    <div class="modal-box bg-white dark:bg-gray-900 rounded-2xl max-w-xl w-full shadow-2xl p-6">
+      <div class="flex items-start justify-between mb-4">
+        <h2 class="text-2xl font-bold">Παραγγελία / Παραλαβή</h2>
+        <button id="closeOrder" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">Κλείσιμο ✕</button>
+      </div>
+
+      <!-- περίληψη καλαθιού -->
+      <div class="mb-4">
+        <h3 class="font-semibold">Περιεχόμενα Καλαθιού</h3>
+        <div id="orderCartList" class="mt-2 space-y-2 text-sm text-gray-700 dark:text-gray-200 max-h-40 overflow-auto"></div>
+        <div class="mt-2 flex justify-between font-bold"><span>Σύνολο</span><span id="orderTotal">€0.00</span></div>
+      </div>
+
+      <form id="orderForm" class="space-y-3">
+        <div class="grid grid-cols-1 gap-3">
+          <input type="text" name="name" placeholder="Ονοματεπώνυμο" class="w-full border px-3 py-2 rounded" required>
+          <input type="email" name="email" placeholder="Email (θα σταλεί η απόδειξη)" class="w-full border px-3 py-2 rounded" required>
+          <input type="text" name="phone" placeholder="Τηλέφωνο" class="w-full border px-3 py-2 rounded">
+          <input type="text" name="address" placeholder="Διεύθυνση (συμπληρώστε μόνο αν παράδοση)" class="w-full border px-3 py-2 rounded">
+        </div>
+
+        <div>
+          <label class="font-semibold">Τρόπος Πληρωμής</label>
+          <select name="payment" class="w-full border px-3 py-2 rounded" required>
+            <option value="">-- Επιλέξτε --</option>
+            <option value="PayPal">PayPal</option>
+            <option value="Visa">Visa</option>
+            <option value="Alpha Bank">Alpha Bank</option>
+          </select>
+        </div>
+
+        <input type="hidden" name="cartJson" id="cartJson" value="[]">
+        <input type="hidden" name="orderType" id="orderType" value="delivery">
+
+        <div class="flex gap-3">
+          <button type="submit" id="submitOrder" class="flex-1 bg-indigo-600 text-white py-2 rounded">Συνέχεια & Αποστολή Απόδειξης</button>
+          <button type="button" id="submitPayLater" class="flex-1 bg-gray-400 text-white py-2 rounded">Αποθήκευση (Demo)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+/* ============================
+   Original DATA + rendering
+   (όπως στο αρχικό σου)
+   ============================ */
+const DATA = {
+  new: [
+    { id: 'p1', title: 'Vozol Vista Plug 20mg 2ml Kit + 10ml e liquid Watermelon Ice', price: 19.90, img: 'images/product1.jpg'},
+    { id: 'p2', title: 'Vozol Vista Plug 20mg 2ml Kit + 10ml e liquid Strawberry Raspberry Cherry', price: 19.90, img: 'images/product2.jpg'},
+    { id: 'p3', title: 'Vozol Vista Plug 20mg 2ml Kit + 10ml e liquid Blueberry Ice', price: 19.00, img: 'images/product3.jpg'},
+    { id: 'p4', title: 'Vozol Vista Plug 20mg 2ml Kit + 10ml e liquid Mango Ice', price: 19.90, img: 'images/product4.jpg'}
+  ],
+  top: [
+    { id: 'p2' }, { id: 'p3' }, { id: 'p1' }, { id: 'p4' }
+  ],
+  liquids: [
+    { id: 'l1', title: 'Nubo Strawberry Mojito 15/60ml Flavour Shot', price: 12.90, img: 'images/liquid1.jpg' },
+    { id: 'l2', title: 'Nubo Blueberry Cherry Lime 15/60ml Flavour Shot', price: 12.90, img: 'images/liquid2.jpg',}
+  ],
+  recommended: [
+    { id: 'p4' }, { id: 'p1' }, { id: 'l1' }, { id: 'p3' }
+  ]
+};
+
+const catalog = {};
+DATA.new.forEach(p => catalog[p.id] = p);
+DATA.liquids.forEach(p => catalog[p.id] = p);
+
+function createCard(item) {
+  const div = document.createElement('article');
+  div.className = 'product-card bg-white dark:bg-gray-800 rounded-2xl overflow-hidden transition reveal';
+  div.dataset.id = item.id;
+  div.dataset.title = item.title;
+  div.dataset.price = item.price;
+  div.dataset.img = item.img;
+  div.dataset.desc = item.desc || '';
+  div.innerHTML = `
+    <div class="relative h-48 overflow-hidden rounded-t-2xl">
+      <img src="${item.img}" class="w-full h-full object-cover" alt="${item.title}">
+      ${item.badge ? `<span class="absolute left-3 top-3 bg-red-600 text-white text-xs px-2 py-1 rounded-full">${item.badge}</span>` : ''}
+    </div>
+    <div class="p-4">
+      <h4 class="font-semibold">${item.title}</h4>
+      <p class="text-sm text-gray-500 dark:text-gray-400">${item.desc || ''}</p>
+      <div class="mt-3 flex items-center justify-between">
+        <div class="text-indigo-600 font-bold">€${item.price.toFixed(2)}</div>
+        <div class="flex gap-2">
+          <button class="addQuick px-3 py-1 bg-green-600 text-white rounded btn-press">+ Καλάθι</button>
+          <button class="openProductBtn px-3 py-1 bg-gray-900 text-white rounded btn-press">Προβολή</button>
+        </div>
+      </div>
+    </div>`;
+  return div;
+}
+
+function renderSection(gridElId, items) {
+  const grid = document.getElementById(gridElId);
+  grid.innerHTML = '';
+  items.forEach(it => {
+    const obj = (it.id && catalog[it.id]) ? catalog[it.id] : it;
+    if (obj) grid.appendChild(createCard(obj));
+  });
+}
+
+renderSection('newGrid', DATA.new);
+renderSection('topGrid', DATA.top);
+renderSection('liquidsGrid', DATA.liquids);
+renderSection('recGrid', DATA.recommended);
+
+/* reveal */
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+/* slider */
+const slides = Array.from(document.querySelectorAll('.slide'));
+const dots = Array.from(document.querySelectorAll('.dot'));
+let slideIndex = 0;
+function showSlide(i) {
+  slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+  dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+  slideIndex = i;
+}
+document.getElementById('nextSlide').addEventListener('click', () => showSlide((slideIndex + 1) % slides.length));
+document.getElementById('prevSlide').addEventListener('click', () => showSlide((slideIndex - 1 + slides.length) % slides.length));
+dots.forEach(d => d.addEventListener('click', () => showSlide(parseInt(d.dataset.dot))));
+let autoSlide = setInterval(() => showSlide((slideIndex + 1) % slides.length), 4500);
+document.getElementById('slidesWrap').addEventListener('mouseenter', () => clearInterval(autoSlide));
+document.getElementById('slidesWrap').addEventListener('mouseleave', () => autoSlide = setInterval(() => showSlide((slideIndex + 1) % slides.length), 4500));
+showSlide(0);
+
+/* product modal */
+const productModal = document.getElementById('productModal');
+const modalImg = document.getElementById('modalImg');
+const modalTitle = document.getElementById('modalTitle');
+const modalPrice = document.getElementById('modalPrice');
+const modalDesc = document.getElementById('modalDesc');
+const qtyInput = document.getElementById('qtyInput');
+const qtyInc = document.getElementById('qtyInc');
+const qtyDec = document.getElementById('qtyDec');
+const modalAdd = document.getElementById('modalAdd');
+const modalBuy = document.getElementById('modalBuy');
+const closeModalBtn = document.getElementById('closeModal');
+
+document.addEventListener('click', (e) => {
+  const card = e.target.closest('.product-card');
+  if (card && (e.target.matches('.openProductBtn') || e.target.closest('.openProductBtn'))) {
+    const title = card.dataset.title;
+    const price = parseFloat(card.dataset.price);
+    const img = card.dataset.img;
+    const desc = card.dataset.desc;
+    modalTitle.textContent = title;
+    modalPrice.textContent = `€${price.toFixed(2)}`;
+    modalDesc.textContent = desc;
+    modalImg.src = img;
+    qtyInput.value = 1;
+    productModal.classList.remove('hidden');
+    productModal.classList.add('flex');
+
+    modalAdd.onclick = () => {
+      addToCart({ id: card.dataset.id, title, price, img, qty: parseInt(qtyInput.value) || 1 });
+      closeModal();
+    };
+    modalBuy.onclick = () => {
+      // άμεση αγορά: προσθέτουμε και ανοίγουμε cart
+      addToCart({ id: card.dataset.id, title, price, img, qty: parseInt(qtyInput.value) || 1 });
+      openCart();
+      closeModal();
+    };
+  }
+});
+
+function closeModal() {
+  productModal.classList.add('hidden');
+  productModal.classList.remove('flex');
+}
+closeModalBtn.addEventListener('click', closeModal);
+qtyInc.addEventListener('click', () => qtyInput.value = Math.max(1, parseInt(qtyInput.value) + 1));
+qtyDec.addEventListener('click', () => qtyInput.value = Math.max(1, parseInt(qtyInput.value) - 1));
+
+/* CART logic (συνδεδεμένο με order modal) */
+const openCartBtn = document.getElementById('openCartBtn');
+const cartSidebar = document.getElementById('cartSidebar');
+const closeCartBtn = document.getElementById('closeCart');
+const cartItemsEl = document.getElementById('cartItems');
+const cartTotalEl = document.getElementById('cartTotal');
+const cartBadge = document.getElementById('cartBadge');
+const clearCartBtn = document.getElementById('clearCart');
+const checkoutBtn = document.getElementById('checkoutBtn');
+const orderBtnSidebar = document.getElementById('orderBtnSidebar');
+const pickupBtnSidebar = document.getElementById('pickupBtnSidebar');
+
+let cart = [];
+
+function addToCart(obj) {
+  const existing = cart.find(i => i.id === obj.id);
+  if (existing) existing.qty += obj.qty || 1;
+  else cart.push({ ...obj });
+  renderCart();
+  // small feedback
+  cartBadge.classList.add('animate-pulse');
+  setTimeout(() => cartBadge.classList.remove('animate-pulse'), 300);
+}
+function renderCart() {
+  cartItemsEl.innerHTML = '';
+  let total = 0;
+  cart.forEach((it, idx) => {
+    total += it.price * it.qty;
+    const r = document.createElement('div');
+    r.className = 'flex items-center gap-3 p-2 bg-white/60 dark:bg-gray-700/50 rounded';
+    r.innerHTML = `
+      <img src="${it.img}" class="w-14 h-14 object-cover rounded" />
+      <div class="flex-1">
+        <div class="font-semibold text-sm">${it.title}</div>
+        <div class="text-xs text-gray-600 dark:text-gray-300">${it.qty} × €${it.price.toFixed(2)}</div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <button class="inc bg-gray-200 px-2 rounded">+</button>
+        <button class="dec bg-red-500 text-white px-2 rounded">−</button>
+      </div>
+    `;
+    r.querySelector('.inc').addEventListener('click', () => { it.qty++; renderCart(); });
+    r.querySelector('.dec').addEventListener('click', () => { it.qty--; if (it.qty <= 0) cart.splice(idx, 1); renderCart(); });
+    cartItemsEl.appendChild(r);
+  });
+  cartTotalEl.textContent = `€${total.toFixed(2)}`;
+  cartBadge.textContent = cart.reduce((s, i) => s + i.qty, 0);
+}
+
+/* UI hooks */
+openCartBtn.addEventListener('click', () => cartSidebar.classList.remove('translate-x-full'));
+closeCartBtn.addEventListener('click', () => cartSidebar.classList.add('translate-x-full'));
+clearCartBtn.addEventListener('click', () => { cart = []; renderCart(); });
+
+/* αν πατηθεί Checkout (στο sidebar) -> ανοίγει order modal με περιεχόμενο καλαθιού */
+checkoutBtn.addEventListener('click', (e) => {
+  if (!cart.length) return alert('Το καλάθι είναι άδειο');
+  openOrderModal('delivery');
+});
+
+/* παραγγελία / παραλαβή από sidebar (ιδιαίτερο flag orderType) */
+orderBtnSidebar.addEventListener('click', () => {
+  if (!cart.length) return alert('Το καλάθι είναι άδειο');
+  openOrderModal('delivery');
+});
+pickupBtnSidebar.addEventListener('click', () => {
+  if (!cart.length) return alert('Το καλάθι είναι άδειο');
+  openOrderModal('pickup');
+});
+
+/* quick add from grid */
+document.addEventListener('click', (e) => {
+  if (e.target.matches('.addQuick') || e.target.closest('.addQuick')) {
+    const card = e.target.closest('.product-card');
+    addToCart({ id: card.dataset.id, title: card.dataset.title, price: parseFloat(card.dataset.price), img: card.dataset.img, qty: 1 });
+  }
+});
+
+/* open cart helper */
+function openCart() { cartSidebar.classList.remove('translate-x-full'); }
+
+/* ESC closes modals / cart */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!productModal.classList.contains('hidden')) closeModal();
+    if (!cartSidebar.classList.contains('translate-x-full')) cartSidebar.classList.add('translate-x-full');
+    if (!document.getElementById('orderModal').classList.contains('hidden')) document.getElementById('orderModal').classList.add('hidden');
+  }
+});
+
+/* ============================
+   ORDER modal logic
+   ============================ */
+const orderModal = document.getElementById('orderModal');
+const closeOrder = document.getElementById('closeOrder');
+const orderCartList = document.getElementById('orderCartList');
+const orderTotal = document.getElementById('orderTotal');
+const cartJsonInput = document.getElementById('cartJson');
+const orderTypeInput = document.getElementById('orderType');
+const orderForm = document.getElementById('orderForm');
+const submitOrderBtn = document.getElementById('submitOrder');
+const submitPayLater = document.getElementById('submitPayLater');
+
+function openOrderModal(type = 'delivery') {
+  // populate cart list
+  orderCartList.innerHTML = '';
+  let total = 0;
+  cart.forEach(it => {
+    total += it.price * it.qty;
+    const row = document.createElement('div');
+    row.className = 'flex justify-between items-center';
+    row.innerHTML = `<div class="text-sm">${it.qty} × ${it.title}</div><div class="text-sm font-medium">€${(it.price * it.qty).toFixed(2)}</div>`;
+    orderCartList.appendChild(row);
+  });
+  orderTotal.textContent = `€${total.toFixed(2)}`;
+  cartJsonInput.value = JSON.stringify(cart);
+  orderTypeInput.value = type;
+  orderModal.classList.remove('hidden');
+  document.getElementById('orderModal').classList.add('flex');
+
+  // optional: if pickup, hide address placeholder or prefill
+  const addrInput = orderForm.querySelector('input[name="address"]');
+  if (type === 'pickup') {
+    addrInput.placeholder = 'Δεν χρειάζεται για παραλαβή (προαιρετικό)';
+  } else {
+    addrInput.placeholder = 'Διεύθυνση (αν χρειάζεται)';
+  }
+}
+
+closeOrder.addEventListener('click', () => {
+  orderModal.classList.add('hidden');
+  document.getElementById('orderModal').classList.remove('flex');
+});
+
+/* Submit order: στέλνουμε τα στοιχεία + cartJson στο sendMail.php */
+orderForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!cart.length) return alert('Το καλάθι είναι άδειο');
+
+  submitOrderBtn.disabled = true;
+  submitOrderBtn.textContent = 'Αποστολή...';
+
+  const formData = new FormData(orderForm);
+  // append server-side friendly fields (already in form)
+  try {
+    const res = await fetch('sendMail.php', {
+      method: 'POST',
+      body: formData
+    });
+    const text = await res.text();
+    alert(text);
+    // μετά την επιτυχή υποβολή, άδειασέ το το cart (αν το email στάλθηκε επιτυχώς θα πάρει "OK" ή success)
+    // Εδώ υποθέτουμε ότι PHP επιστρέφει επιτυχές μήνυμα — για απλό flow θα το αδειάζουμε ανεξάρτητα
+    cart = [];
+    renderCart();
+    orderModal.classList.add('hidden');
+    document.getElementById('orderModal').classList.remove('flex');
+    orderForm.reset();
+  } catch (err) {
+    console.error(err);
+    alert('Σφάλμα στην αποστολή. Προσπάθησε ξανά.');
+  } finally {
+    submitOrderBtn.disabled = false;
+    submitOrderBtn.textContent = 'Συνέχεια & Αποστολή Απόδειξης';
+  }
+});
+
+/* Demo δεύτερο κουμπί: αποθήκευση ή "pay later" */
+submitPayLater.addEventListener('click', () => {
+  alert('Demo: Η παραγγελία αποθηκεύτηκε προσωρινά (demo).');
+});
+
+/* ============================
+   End of script
+   ============================ */
+</script>
+</body>
+</html>
